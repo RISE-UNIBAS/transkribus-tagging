@@ -190,7 +190,7 @@ class TranskribusAPIClient:
                 )
                 return True
             logger.error(
-                f"Upload failed {response.status_code}: {response.text[:300]}"
+                f"Upload failed {response.status_code}: {response.text}"
             )
             return False
         except requests.exceptions.RequestException as e:

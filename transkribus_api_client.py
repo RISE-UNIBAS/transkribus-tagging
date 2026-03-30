@@ -8,6 +8,7 @@ the PageXML export, such as labels, tags, and excluded status.
 
 import logging
 import requests
+import xml.etree.ElementTree as ET
 import xmltodict
 from typing import Optional, Dict, Any
 
@@ -196,6 +197,35 @@ class TranskribusAPIClient:
         except requests.exceptions.RequestException as e:
             logger.error(f"Error uploading transcript: {e}")
             return False
+
+    def get_page_status(self, page_xml: str) -> Optional[str]:
+        """
+        Extract the page processing status from a PAGE XML string.
+
+        Reads the status attribute from the <TranskribusMetadata> element,
+        which Transkribus uses to track workflow state (e.g. "IN_PROGRESS", "DONE", "GT").
+
+        Args:
+            page_xml: PAGE XML string as returned by get_page_xml()
+
+        Returns:
+            Status string, or None if the element/attribute is not found
+        """
+        PAGE_NS = "http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15"
+        try:
+            root = ET.fromstring(page_xml)
+            # Try with the standard PAGE XML namespace first
+            metadata = root.find(f".//{{{PAGE_NS}}}TranskribusMetadata")
+            if metadata is None:
+                # Fall back to no-namespace search (some exports omit the namespace)
+                metadata = root.find(".//TranskribusMetadata")
+            if metadata is not None:
+                return metadata.get("status")
+            logger.warning("TranskribusMetadata element not found in PAGE XML")
+            return None
+        except ET.ParseError as e:
+            logger.error(f"Failed to parse PAGE XML when reading status: {e}")
+            return None
 
     def get_page_xml(
         self, collection_id: int, doc_id: int, page_nr: int
